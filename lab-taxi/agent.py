@@ -49,6 +49,6 @@ class Agent:
         - next_state: the current state of the environment
         - done: whether the episode is complete (True or False)
         """
-        self.Q[state][action] = 0.98 * self.Q[state][action] + 0.03 * (reward + max(self.Q[next_state]))
+        self.Q[state][action] = 0.98 * self.Q[state][action] + 0.02 * (reward + max(self.Q[next_state]))
         # self.Q[state][action] += 1
         return self.Q
