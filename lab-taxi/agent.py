@@ -11,7 +11,7 @@ class Agent:
         """
         self.nA = nA
         self.Q = defaultdict(lambda: np.zeros(self.nA))
-        self.passenger_locindex = {[0,0],[0,4],[4,0],[4,3]}
+        self.passenger_locindex = [[0,0],[0,4],[4,0],[4,3]]
 
     def select_action(self, state):
         """ Given the state, select an action.
@@ -22,8 +22,9 @@ class Agent:
         =======
         - action: an integer, compatible with the task's action space
         """
-        epsilon = 0.05
-        #optimal rule of pick action
+        epsilon = 0.06
+        # optimal rule of pick action
+        # [2, 3, 2, 0] [0.01 0.01 0.01 0.01 0.97 0.  ]
         state_decode = list(env.decode(state))
         policy_s = np.ones(self.nA) * epsilon / self.nA
         if state_decode[:2] not in self.passenger_locindex:
@@ -36,7 +37,7 @@ class Agent:
             else:
                 policy_s[5] = 0
                 policy_s[np.argmax(self.Q[state])] = 1 - epsilon + (epsilon / self.nA) * 2
-
+        print(state_decode,policy_s)
         return np.random.choice(self.nA, p=policy_s)
 
     def step(self, state, action, reward, next_state, done):
