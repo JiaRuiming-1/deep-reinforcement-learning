@@ -11,8 +11,8 @@ class Agent:
         """
         self.nA = nA
         self.Q = defaultdict(lambda: np.zeros(self.nA))
-        self.spisode_step = 1
-        self.alpha = 0.04
+        self.spisode_step = 0
+        self.alpha = 0.05
         #{0:'down', 1:'up', 2:'right', 3:'left', 4:'pick', 5:'drop'}
 
     def select_action(self, state, action_mask):
@@ -24,8 +24,9 @@ class Agent:
         =======
         - action: an integer, compatible with the task's action space
         """
-        epsilon = max(round(1/self.spisode_step, 4), 0.003)
-        self.spisode_step += 0.002
+        epsilon = np.exp(-0.001 * self.spisode_step)
+        epsilon = max(round(epsilon, 4), 0.003)
+        self.spisode_step += 1
         max_index = np.argmax(self.Q[state])
         
         if action_mask[max_index] == 0:
