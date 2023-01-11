@@ -27,3 +27,12 @@ print((next_state, reward, done, _, info))
 print(action, action_name_set[action])
 print(f'current location:{list(env.decode(next_state))[:2]}')
 print(f'passenger {loc_coordinate_set[list(env.decode(next_state))[2]]}->{loc_coordinate_set[list(env.decode(next_state))[3]]}')
+
+agent = Agent()
+avg_rewards, best_avg_reward = interact(env, agent, num_episodes=20000)
+import matplotlib.pyplot as plt
+avg_scores2 = [x for ii,x in enumerate(avg_rewards) if ii>9999]
+plt.plot(np.linspace(0,20000,len(avg_rewards),endpoint=False), np.asarray(avg_rewards))
+plt.show()
+plt.plot(np.linspace(10000,20000,len(avg_scores2),endpoint=False), np.asarray(avg_scores2))
+plt.show()
