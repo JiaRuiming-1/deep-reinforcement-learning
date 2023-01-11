@@ -11,9 +11,11 @@ class Agent:
         """
         self.nA = nA
         self.Q = defaultdict(lambda: np.zeros(self.nA))
-        self.passenger_locindex = [[0,0],[0,4],[4,0],[4,3]]
+        self.spisode_step = 1
+        self.alpha = 0.04
+        #{0:'down', 1:'up', 2:'right', 3:'left', 4:'pick', 5:'drop'}
 
-    def select_action(self, state):
+    def select_action(self, state, action_mask):
         """ Given the state, select an action.
         Params
         ======
@@ -22,22 +24,15 @@ class Agent:
         =======
         - action: an integer, compatible with the task's action space
         """
-        epsilon = 0.06
-        # optimal rule of pick action
-        # [2, 3, 2, 0] [0.01 0.01 0.01 0.01 0.97 0.  ]
-        state_decode = list(env.decode(state))
-        policy_s = np.ones(self.nA) * epsilon / self.nA
-        if state_decode[:2] not in self.passenger_locindex:
-            policy_s[-2:] = 0
-            policy_s[np.argmax(self.Q[state])] = 1 - epsilon + (epsilon / self.nA) * 3
+        epsilon = max(round(1/self.spisode_step, 4), 0.003)
+        self.spisode_step += 0.002
+        max_index = np.argmax(self.Q[state])
+        
+        if action_mask[max_index] == 0:
+            policy_s = action_mask.copy() / np.count_nonzero(action_mask)              
         else:
-            if loc_coordinate_set[state_decode[2]]==[-1,-1]:
-                policy_s[4] = 0
-                policy_s[np.argmax(self.Q[state])] = 1 - epsilon + (epsilon / self.nA) * 2
-            else:
-                policy_s[5] = 0
-                policy_s[np.argmax(self.Q[state])] = 1 - epsilon + (epsilon / self.nA) * 2
-        print(state_decode,policy_s)
+            policy_s = action_mask.copy() * epsilon / np.count_nonzero(action_mask) 
+            policy_s[max_index] = 1 - epsilon + epsilon / np.count_nonzero(action_mask) 
         return np.random.choice(self.nA, p=policy_s)
 
     def step(self, state, action, reward, next_state, done):
@@ -50,6 +45,9 @@ class Agent:
         - next_state: the current state of the environment
         - done: whether the episode is complete (True or False)
         """
-        self.Q[state][action] = 0.98 * self.Q[state][action] + 0.02 * (reward + max(self.Q[next_state]))
+        if action == 4 and reward == -1:
+            reward = 0
+        self.Q[state][action] = (1-self.alpha) * self.Q[state][action] + self.alpha * (reward + max(self.Q[next_state]))
+            
         # self.Q[state][action] += 1
         return self.Q
