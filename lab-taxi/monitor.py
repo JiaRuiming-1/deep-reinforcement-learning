@@ -12,7 +12,6 @@ def interact(env, agent, num_episodes=20000, window=100):
     - agent: instance of class Agent (see Agent.py for details)
     - num_episodes: number of episodes of agent-environment interaction
     - window: number of episodes to consider when calculating average rewards
-
     Returns
     =======
     - avg_rewards: deque containing average rewards
@@ -27,14 +26,17 @@ def interact(env, agent, num_episodes=20000, window=100):
     # for each episode
     for i_episode in range(1, num_episodes+1):
         # begin the episode
-        state = env.reset()[0]
+        state = env.reset()
+        action_mask = state[1]['action_mask']
+        state = state[0]
         # initialize the sampled reward
         samp_reward = 0
         while True:
             # agent selects an action
-            action = agent.select_action(state)
+            action = agent.select_action(state, action_mask)
             # agent performs the selected action
             next_state, reward, done, _, info = env.step(action)
+            action_mask = info['action_mask']
             # agent performs internal updates based on sampled experience
             agent.step(state, action, reward, next_state, done)
             # update the sampled reward
@@ -50,14 +52,16 @@ def interact(env, agent, num_episodes=20000, window=100):
             avg_reward = np.mean(samp_rewards)
             # append to deque
             avg_rewards.append(avg_reward)
+            # monitor progress
+            print("\rEpisode {}/{} || Best average reward {} || {}"\
+                  .format(i_episode, num_episodes, best_avg_reward, round(1/agent.spisode_step,4)), end="")
+            sys.stdout.flush()
             # update best average reward
             if avg_reward > best_avg_reward:
                 best_avg_reward = avg_reward
-        # monitor progress
-        print("\rEpisode {}/{} || Best average reward {}".format(i_episode, num_episodes, best_avg_reward), end="")
-        sys.stdout.flush()
         # check if task is solved (according to OpenAI Gym)
         if best_avg_reward >= 9.7:
+            print(f'\nbest_avg_reward is {best_avg_reward}')
             print('\nEnvironment solved in {} episodes.'.format(i_episode), end="")
             break
         if i_episode == num_episodes: print('\n')
