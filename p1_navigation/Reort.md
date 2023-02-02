@@ -43,7 +43,7 @@ the net work contains 6 ways to improve method of Dqn
 ##### Note that Prioritized replay buffer use segment tree to choice experience samples
 
 #### the reward plot below
-[image-20230203002927797]:https://github.com/JiaRuiming-1/deep-reinforcement-learning/blob/master/p1_navigation/%E4%B8%8B%E8%BD%BD.png "Reward"
+[image-20230203002927797]:https://github.com/JiaRuiming-1/deep-reinforcement-learning/blob/master/p1_navigation/%E4%B8%8B%E8%BD%BD.png
 the model saved as checkpoint_fast.pth file which trained by GPU
 
 #### Ideas for Future Work
