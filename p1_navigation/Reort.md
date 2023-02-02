@@ -21,17 +21,29 @@ the net work contains 6 ways to improve method of Dqn
 #### There are many hyperparameters, the main content below:
 
   train frames steps number is 60000, so that the iterations number is 200
+  
   memory_size (int)=1e5 length of memory
+  
   batch_size (int)=128 batch size for sampling
+  
   target_update (int)=32 period for target model's hard update
+  
   lr (float)=0.0001 learning rate
+  
   gamma (float)=0.99 discount factor
+  
   alpha (float)=0.5 determines how much prioritization is used
+  
   beta (float)=0.4 determines how much importance sampling is used
+  
   prior_eps (float)=1e-6 guarantees every transition can be sampled
+  
   v_min (float)=-10 min value of support
+  
   v_max (float)=10 max value of support
+  
   atom_size (int)=51 the unit number of support
+  
   n_step (int)=3 step number to calculate n-step td error
 
 #### There are two model save in model.py
