@@ -46,6 +46,7 @@ the net work contains 6 ways to improve method of Dqn
 
 #### the reward plot below
 ![Reward][image2]
+
 the model saved as checkpoint_fast.pth file which trained by GPU
 
 #### Ideas for Future Work
