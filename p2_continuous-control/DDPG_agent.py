@@ -14,8 +14,9 @@ BATCH_SIZE = 128  # minibatch size
 GAMMA = 0.99  # discount factor
 TAU = 1e-3  # for soft update of target parameters
 LR_ACTOR = 1e-4  # learning rate of the actor
-LR_CRITIC = 1e-3  # learning rate of the critic
+LR_CRITIC = 1e-4  # learning rate of the critic
 WEIGHT_DECAY = 0  # L2 weight decay
+UPDATE_INTERVAL = 4 # how many step update target network
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -23,7 +24,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent():
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_dim, action_dim, random_seed):
+    def __init__(self, state_dim, action_dim, random_seed=1234):
         """Initialize an Agent object.
 
         Params
@@ -38,8 +39,8 @@ class Agent():
 
         self.network = lambda: DDPGActorCriticNet(
         self.state_dim, self.action_dim,
-        actor_opt_fn=lambda params: torch.optim.Adam(params, lr=1e-4),
-        critic_opt_fn=lambda params: torch.optim.Adam(params, lr=1e-4))
+        actor_opt_fn=lambda params: torch.optim.Adam(params, lr=LR_ACTOR),
+        critic_opt_fn=lambda params: torch.optim.Adam(params, lr=LR_CRITIC, weight_decay=WEIGHT_DECAY))
 
         self.network_local = self.network().to(device)
         self.network_target = self.network().to(device)
@@ -49,6 +50,11 @@ class Agent():
         self.noise = OUNoise(action_dim, random_seed)
         # Replay memory
         self.memory = ReplayBuffer(action_dim, BUFFER_SIZE, BATCH_SIZE, random_seed)
+        # step_num init 0
+        self.step_num = 0
+        # actor and critic loss record
+        self.actor_loss = []
+        self.critic_loss = []
 
     # def preprocess_batch(images, bkg_color=np.array([144, 72, 17])):
     #     list_of_images = np.asarray(images)  # (2,210,160,3)
@@ -60,11 +66,17 @@ class Agent():
     #     batch_input = np.swapaxes(list_of_images_prepro, 0, 1)  # (1,2,80,80)
     #     return torch.from_numpy(batch_input).float().to(device)
 
-    def step(self, states, actions, rewards, next_states, dones):
+    def step(self, states, actions, rewards, next_states, dones, add_noise=True):
         """Save experience in replay memory, and use random sample from buffer to learn."""
         # Save experience / reward
-        for i in range(len(states)):
-            self.memory.add(states[i], actions[i], rewards[i], next_states[i], dones[i])
+        self.step_num += 1
+        if add_noise == True:
+            for i in range(len(states)):
+                actions[i] = np.add(actions[i], self.noise.sample())
+                self.memory.add(states[i], actions[i], rewards[i], next_states[i], dones[i])
+        else:
+            for i in range(len(states)):
+                self.memory.add(states[i], actions[i], rewards[i], next_states[i], dones[i])
 
         # Learn, if enough samples are available in memory
         if len(self.memory) > len(states) * BATCH_SIZE:
@@ -99,6 +111,7 @@ class Agent():
         # Minimize the loss
         self.network_local.zero_grad()
         critic_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.network_local.parameters(), 0.5)
         self.network_local.critic_opt.step()
 
         # ---------------------------- update actor ---------------------------- #
@@ -108,10 +121,15 @@ class Agent():
         # Minimize the loss
         self.network_local.zero_grad()
         actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.network_local.parameters(), 0.5)
         self.network_local.actor_opt.step()
 
         # ----------------------- update target networks ----------------------- #
-        self.soft_update(self.network_target, self.network_local)
+        if self.step_num % UPDATE_INTERVAL == 0:
+            # record network loss
+            self.actor_loss.append(actor_loss)
+            self.critic_loss.append(critic_loss)
+            self.soft_update(self.network_target, self.network_local)
 
     def soft_update(self, local_model, target_model):
         """Soft update model parameters.
@@ -126,22 +144,15 @@ class Agent():
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(TAU * local_param.data + (1.0 - TAU) * target_param.data)
 
-    def act(self, state, add_noise=True):
+    def act(self, states):
         """Returns actions for given state as per current policy."""
-        state = torch.from_numpy(state).float().to(device)
+        states = torch.from_numpy(states).float().to(device)
         self.network_local.eval()
         with torch.no_grad():
-            action = self.network_local.forward(state).cpu().data.numpy()
+            actions = self.network_local.forward(states).cpu().data.numpy()
         self.network_local.train()
-        if add_noise:
-            action += self.noise.sample()
-        return np.clip(action, 0, 1)
+        return np.clip(actions, 0, 1)
 
     def reset(self):
         self.noise.reset()
 
-
-
-if __name__ == '__main__':
-    agent = Agent(4,2,0)
-    print(agent.network_local == agent.network_target)
