@@ -1,50 +1,129 @@
+import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def hidden_init(layer):
+    fan_in = layer.weight.data.size()[0]
+    lim = 1. / np.sqrt(fan_in)
+    return (-lim, lim)
 
-def layer_init(layer, w_scale=1.0):
-    nn.init.orthogonal_(layer.weight.data)
-    layer.weight.data.mul_(w_scale)
-    nn.init.constant_(layer.bias.data, 0)
-    return layer
+class Actor(nn.Module):
+    """Actor (Policy) Model."""
+
+    def __init__(self, state_size, action_size, seed, fc1_units=400, fc2_units=300):
+        """Initialize parameters and build model.
+        Params
+        ======
+            state_size (int): Dimension of each state
+            action_size (int): Dimension of each action
+            seed (int): Random seed
+            fc1_units (int): Number of nodes in first hidden layer
+            fc2_units (int): Number of nodes in second hidden layer
+        """
+        super(Actor, self).__init__()
+        self.seed = torch.manual_seed(seed)
+
+        self.fc1 = nn.Linear(state_size, fc1_units)
+        self.bn1 = nn.BatchNorm1d(fc1_units)
+        self.fc2 = nn.Linear(fc1_units, fc2_units)
+        self.fc3 = nn.Linear(fc2_units, action_size)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.fc3.weight.data.uniform_(-3e-3, 3e-3)
+
+    def forward(self, state):
+        """Build an actor (policy) network that maps states -> actions."""
+        x = F.relu(self.bn1(self.fc1(state)))
+        x = F.relu(self.fc2(x))
+        return torch.tanh(self.fc3(x))
 
 
-class FCBody(nn.Module):
-    def __init__(self, state_dim, hidden_units=(64, 64), gate=F.relu):
-        super(FCBody, self).__init__()
-        dims = (state_dim,) + hidden_units
+class Critic(nn.Module):
+    """Critic (Value) Model."""
 
-        self.layers = nn.ModuleList(
-            [layer_init(nn.Linear(dim_in, dim_out)) for dim_in, dim_out in zip(dims[:-1], dims[1:])])
+    def __init__(self, state_size, action_size, seed, fcs1_units=400, fc2_units=300):
+        """Initialize parameters and build model.
+        Params
+        ======
+            state_size (int): Dimension of each state
+            action_size (int): Dimension of each action
+            seed (int): Random seed
+            fcs1_units (int): Number of nodes in the first hidden layer
+            fc2_units (int): Number of nodes in the second hidden layer
+        """
+        super(Critic, self).__init__()
+        self.seed = torch.manual_seed(seed)
 
-        self.gate = gate
-        self.feature_dim = dims[-1]
+        self.fcs1 = nn.Linear(state_size, fcs1_units)
+        self.bn1 = nn.BatchNorm1d(fcs1_units)
+        self.fc2 = nn.Linear(fcs1_units+action_size, fc2_units)
+        self.fc3 = nn.Linear(fc2_units, 1)
+        self.reset_parameters()
 
-    def forward(self, x):
-        for layer in self.layers:
-            x = self.gate(layer(x))
-        return x
+    def reset_parameters(self):
+        self.fcs1.weight.data.uniform_(*hidden_init(self.fcs1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.fc3.weight.data.uniform_(-3e-3, 3e-3)
+
+    def forward(self, state, action):
+        """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
+        xs = F.relu(self.bn1(self.fcs1(state)))
+        x = torch.cat((xs, action), dim=1)
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
 
 
-class DDPGActorCriticNet(nn.Module):
-    def __init__(self, state_dim, action_dim,
-                 actor_opt_fn, critic_opt_fn
-                 ):
-        super(DDPGActorCriticNet, self).__init__()
+class Policy_Gaussian(nn.Module):
+    """Gaussian  Model."""
+    def __init__(self, state_size, action_size, seed, fc1_units=256, fc2_units=256):
+        """Initialize parameters and build model.
+        Params
+        ======
+            state_size (int): Dimension of each state
+            action_size (int): Dimension of each action
+            seed (int): Random seed
+            fcs1_units (int): Number of nodes in the first hidden layer
+            fc2_units (int): Number of nodes in the second hidden layer
+        """
+        super(Policy_Gaussian, self).__init__()
+        self.seed = torch.manual_seed(seed)
+        # set common feature layer
+        self.fc1 = nn.Linear(state_size, fc1_units)
+        self.bn1 = nn.BatchNorm1d(fc1_units)
+        self.fc2 = nn.Linear(fc1_units, fc2_units)
+        self.fc3 = nn.Linear(fc2_units, action_size)
 
-        self.actor_body = FCBody(state_dim, (256, 256), gate=F.relu)
-        self.critic_body = FCBody(state_dim + action_dim, (256, 256), gate=F.relu)
-        self.fc_action = layer_init(nn.Linear(self.actor_body.feature_dim, action_dim), 1e-3)
-        self.fc_critic = layer_init(nn.Linear(self.critic_body.feature_dim, 1), 1e-3)
+        self.std = nn.Parameter(torch.zeros(action_size))
+        self.reset_parameters()
 
-        self.actor_opt = actor_opt_fn(list(self.actor_body.parameters()) + list(self.fc_action.parameters()))
-        self.critic_opt = critic_opt_fn(list(self.critic_body.parameters()) + list(self.fc_critic.parameters()))
+    def reset_parameters(self):
+        self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.fc3.weight.data.uniform_(-3e-3, 3e-3)
 
-    def forward(self, obs):
-        action = torch.tanh(self.fc_action(self.actor_body(obs)))
-        return action
+    def forward(self, state):
+        """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
+        x = F.relu(self.bn1(self.fc1(state)))
+        x = F.relu(self.fc2(x))
+        mean = torch.tanh(self.fc3(x))
+        dist = torch.distributions.Normal(mean, F.softplus(self.std))
+        action = dist.sample()
+        log_prob = dist.log_prob(action).sum(-1).unsqueeze(-1)
+        entropy = dist.entropy().sum(-1).unsqueeze(-1)
+        return {'action': action,
+                'log_pi_a': log_prob,
+                'entropy': entropy,
+                'mean': mean}
 
-    def critic(self, phi, a):
-        return self.fc_critic(self.critic_body(torch.cat([phi, a], dim=1)))
+
+if __name__ == '__main__':
+    agent = Policy_Gaussian(33,4,0)
+    print(agent)
+
+
+
