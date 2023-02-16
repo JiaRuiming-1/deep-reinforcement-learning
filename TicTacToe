@@ -1,1 +1,0 @@
-alphazero demo
