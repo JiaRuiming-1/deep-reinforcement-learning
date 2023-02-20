@@ -43,15 +43,13 @@ Here we solve this task by [Multi Agent Deep Deterministic Policy Gradient (MADD
 
 `Tennis.ipynb` in main process code implementation.
 
-`maddpg_agent.py` packaged agent functions, experience buffer.
+`maddpg_agent.py` packaged agent functions, memerory buffer.
 
 `model.py` is used to define model.
 
-`replay_buffer.py` is defined  to collect  agent trajectories.
-
 Trained model data save in `assets` folder.
 
-`Report.md` is my conclusion of this task.
+`Report.ipynb` is my conclusion of this task.
 
 Follow the instructions in all these file to start or get overview in `Report.md` first. 
 
