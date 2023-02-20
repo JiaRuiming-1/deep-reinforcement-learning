@@ -39,7 +39,7 @@ The environment is considered solved, when the average (over 100 episodes) of th
 
 ### Instructions
 
-Here we solve this task by [MADDPG](https://arxiv.org/abs/1509.02971) method.
+Here we solve this task by [Multi Agent Deep Deterministic Policy Gradient (MADDPG)]([https://arxiv.org/abs/1509.02971](https://arxiv.org/abs/1706.02275)) method.
 
 `Tennis.ipynb` in main process code implementation.
 
