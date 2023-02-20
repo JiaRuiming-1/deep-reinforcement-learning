@@ -8,13 +8,15 @@ the net work contains 6 ways to improve method of Dqn
 
 ​		2.[Prioritized Experience Replay (PER)](https://github.com/JiaRuiming-1/RL-rainbow/blob/all-contributors/add-AFanaei/03.per.ipynb)
 
-​        3.[Dueling Network](https://github.com/JiaRuiming-1/RL-rainbow/blob/all-contributors/add-AFanaei/04.dueling.ipynb)
+​   3.[Dueling Network](https://github.com/JiaRuiming-1/RL-rainbow/blob/all-contributors/add-AFanaei/04.dueling.ipynb)
 
 ​		4.[Noisy Networks](https://github.com/JiaRuiming-1/RL-rainbow/blob/all-contributors/add-AFanaei/05.noisy_net.ipynb)
 
 ​		5.[N-Step Learning](https://github.com/JiaRuiming-1/RL-rainbow/blob/all-contributors/add-AFanaei/07.n_step_learning.ipynb)
 
 ​		6.[Categorical DQN](https://github.com/JiaRuiming-1/RL-rainbow/blob/all-contributors/add-AFanaei/06.categorical_dqn.ipynb)
+
+another good implemention of [Prioritized Replay-buffer](https://github.com/rlcode/per)
 
 #### There are many hyperparameters, the main content below:
 
